@@ -5,23 +5,25 @@ from typing import Dict, Optional, Any
 class Controller(BaseController):
     def __init__(self):
         self.p_g = 0.5
-        self.i_g = 0.03
-        self.d_g = -0.15
+        self.i_g = 0.05
+        self.d_g = -0.1  
         
         self.err_sum = 0
         self.prev_err = 0
         self.err_hist = []
-        self.window = 5  # adding smol moving avg
+        self.window = 5  
         
-        self.base_spd = 20.0  # ref sped - scaling
-        
+        self.base_spd = 20.0
+    
     def get_gains(self, v):
-        """Adjust gains based on speed"""
-        scale = self.base_spd / max(v, 5.0) 
+        """Adaptive gains based on speed and acceleration"""
+        scale = self.base_spd / max(v, 5.0)
+        accel_scale = min(1.0, abs(self.prev_err) / 2.0)
+        
         return {
-            'p': self.p_g * scale,
-            'i': self.i_g * scale,
-            'd': self.d_g * np.sqrt(scale) 
+            'p': self.p_g * scale * (1.2 - accel_scale),  # Reduce P gain at high accelerations
+            'i': self.i_g * scale * (0.8 + accel_scale),  # Increase I gain at high accelerations
+            'd': self.d_g * np.sqrt(scale) * (1.0 + accel_scale)  # Increase D gain at high accelerations
         }
     
     def smooth_err(self, e):
