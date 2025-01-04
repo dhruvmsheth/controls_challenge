@@ -34,9 +34,8 @@ class Controller(BaseController):
         return -0.1 * roll_a 
     
     def future_ctrl(self, plan, curr_v):
-        steps = min(5, len(plan.lataccel))
-        
-        wts = 4.0 * np.exp(-np.arange(steps) * 0.5)
+        steps = min(5, len(plan.lataccel))        
+        wts = np.linspace(4.0, 1.0, steps)
         weighted_future = np.array(plan.lataccel[:steps]) * wts
         
         total_wt = np.sum(wts)
@@ -45,17 +44,15 @@ class Controller(BaseController):
         return 0.2 * np.sum(weighted_future) / total_wt
     
     def update(self, target_lataccel: float, current_lataccel: float, 
-               state: Any, future_plan: Optional[Any] = None) -> float:        #print(f"shape of target_lataccel: {target_lataccel.shape if hasattr(target_lataccel, 'shape') else type(target_lataccel)}")
+               state: Any, future_plan: Optional[Any] = None) -> float:        
+        #print(f"shape of target_lataccel: {target_lataccel.shape if hasattr(target_lataccel, 'shape') else type(target_lataccel)}")
         #print(f"shape of current_lataccel: {current_lataccel.shape if hasattr(current_lataccel, 'shape') else type(current_lataccel)}")
         #print(f"shape of state: {state.shape if hasattr(state, 'shape') else type(state)}")
         #print(f"shape of future_plan: {future_plan.shape if hasattr(future_plan, 'shape') else type(future_plan)}")        
         e = target_lataccel - current_lataccel
         max_change = 2.0 
         if hasattr(self, 'prev_err'):
-            e = np.clip(e, 
-                        self.prev_err - max_change * 0.1,  
-                        self.prev_err + max_change * 0.1)
-        
+            e = np.clip(e, self.prev_err - max_change * 0.1,  self.prev_err + max_change * 0.1)
         smoothed_e = self.smooth_err(e)        
         self.err_sum = np.clip(self.err_sum + smoothed_e, -10, 10)
         err_deriv = smoothed_e - self.prev_err
